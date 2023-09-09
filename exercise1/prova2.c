@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include<openmp.h>
+#include<omp.h>
+#include<time.h>
 
 void write_pbm_image(void *image,int size,const char *image_name){
 
@@ -22,20 +23,24 @@ void write_pbm_image(void *image,int size,const char *image_name){
 }
 
 void initialize(int size,char* name){
-    char *grid = (char *)malloc(size * sizeof(char ));
-  
-#pragma omp parallel for schedule(static,size/atoi(*(argv+2))){
+    char *grid = (char *)malloc(size*size * sizeof(char) );
+   srand(time(NULL) );
+#pragma omp parallel 
+   {
+#pragma omp  for schedule(static,100)
     for (int i=0;i<size*size;i++){
-        grid[i]=1;
+        grid[i]=(char)(rand()%2);
      }
-    }
+}
     printf("writing image to %s\n", name);
     write_pbm_image((void *) grid, size, name);
     free(grid);
+
 }
 
 int main(int argc,char** argv){
 
-    initialize(atoi(*(argv+1)),"test.pbm");
+    initialize(100,"test_random.pbm");
+    return 0;
     
 }
