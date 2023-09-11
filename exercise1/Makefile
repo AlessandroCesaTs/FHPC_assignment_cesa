@@ -14,5 +14,3 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(OFLAGS) $^ -o $@
 clean:
 	rm -rf *.o *.x $(OBJDIR)/*.o
-image:
-	rm snap* init*

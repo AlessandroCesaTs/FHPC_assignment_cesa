@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<omp.h>
 
 #include"run.h"
 #include "image_handling.h"
@@ -42,6 +43,7 @@ char evaluate_cell(char** grid,int size,int i,int j){
 void update_cell(char** grid,int size,int i,int j){
     char* g=*grid;
     g[i*size+j]=evaluate_cell(grid,size,i,j);
+    return;
 }
 
 
@@ -51,11 +53,12 @@ void run_episode_ordered(char** grid,int size){
             update_cell(grid,size,i,j);
         }
     }
+    return;
 }
 
-void run_episode_static(char** grid,int size){
+void run_episode_static(char** grid,int size){ 
     char **eval = (char **)malloc(size * sizeof(char *));
-    #pragma omp parallel for shared(eval,grid,size) schedule(static)
+    #pragma omp parallel for shared(eval,grid,size) schedule(static,size)
     for (int i=0;i<size;i++){
         eval[i]=(char*)malloc(size * sizeof(char));
         for (int j=0;j<size;j++){
@@ -63,11 +66,12 @@ void run_episode_static(char** grid,int size){
         }
     }
 char* g=*grid;
-#pragma omp parallel for shared(g,eval) schedule(static)
+#pragma omp parallel for shared(g,eval) schedule(static,size)
     for (int i=0;i<size;i++){
             for (int j=0;j<size;j++){
            g[i*size+j]=eval[i][j];
             }
     }
     free(eval);
+    return;
 }

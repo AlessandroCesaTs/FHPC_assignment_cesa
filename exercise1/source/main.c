@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include<stdlib.h>
 #include<time.h>
+#include<omp.h>
 
 #include "initialize.h"
 #include "run.h"
@@ -11,9 +12,17 @@
 
 int main(int argc,char** argv){
     struct  timespec ts;
-
+    int nthreads=1;
+#pragma omp parallel
+  {
+   #pragma omp master
+    {
+      nthreads = omp_get_num_threads();
+      printf("omp operation with %d threads\n", nthreads );
+    }
+  }
     double tstart  = CPU_TIME;
-    initialize(50,"test.pgm");
+    initialize(1000,"test.pgm");
     void* image=NULL;
     int xsize;
     int ysize;
@@ -21,9 +30,9 @@ int main(int argc,char** argv){
     char* char_image;
     read_pgm_image(&image,&maxval, &xsize, &ysize, "test.pgm");
     char_image=(char*)image;
-    for (int t=0;t<101;t++){
+    for (int t=0;t<1000;t++){
          run_episode_static(&char_image,xsize);
-         if (t %100 == 0) {
+         if (t %1000 == 0) {
                  char new_image_name[20];  // Adjust the array size as needed
                 snprintf(new_image_name, sizeof(new_image_name), "test_%d.pgm", t);
                 write_pgm_image((void*)char_image, xsize, new_image_name);
