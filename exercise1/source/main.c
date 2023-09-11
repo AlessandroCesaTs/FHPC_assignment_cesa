@@ -16,7 +16,7 @@ int main(int argc,char** argv){
     read_pgm_image(&image,&maxval, &xsize, &ysize, "test.pgm");
     char_image=(char*)image;
     for (int t=0;t<101;t++){
-         run_episode_ordered(&char_image,xsize);
+         run_episode_static(&char_image,xsize);
          if (t %100 == 0) {
                  char new_image_name[20];  // Adjust the array size as needed
                 snprintf(new_image_name, sizeof(new_image_name), "test_%d.pgm", t);
