@@ -1,0 +1,12 @@
+
+# objects file:
+*.o
+
+# executable files:
+*.x
+
+# slurm outputs
+*.out
+
+#images
+*.pgm
