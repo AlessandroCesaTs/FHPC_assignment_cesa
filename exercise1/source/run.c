@@ -55,6 +55,7 @@ void run_episode_ordered(char** grid,int size){
 
 void run_episode_static(char** grid,int size){
     char **eval = (char **)malloc(size * sizeof(char *));
+    #pragma omp parallel for shared(eval,grid,size) schedule(static)
     for (int i=0;i<size;i++){
         eval[i]=(char*)malloc(size * sizeof(char));
         for (int j=0;j<size;j++){
@@ -62,6 +63,7 @@ void run_episode_static(char** grid,int size){
         }
     }
 char* g=*grid;
+#pragma omp parallel for shared(g,eval) schedule(static)
     for (int i=0;i<size;i++){
             for (int j=0;j<size;j++){
            g[i*size+j]=eval[i][j];
