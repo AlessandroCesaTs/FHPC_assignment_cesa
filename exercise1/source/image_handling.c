@@ -3,6 +3,8 @@
 
 #include "image_handling.h"
 
+//functions for handling pgm images
+
 void write_pgm_image(void *image,int size,const char *image_name){
 
 /*Function for writing an image,given as size x size a matrix of 0s and 1s, in a pbm file
