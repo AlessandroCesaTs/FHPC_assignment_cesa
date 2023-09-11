@@ -3,7 +3,7 @@
 
 #include "image_handling.h"
 
-void write_pbm_image(void *image,int size,const char *image_name){
+void write_pgm_image(void *image,int size,const char *image_name){
 
 /*Function for writing an image,given as size x size a matrix of 0s and 1s, in a pbm file
  * image        : a pointer to the memory region that contains the image

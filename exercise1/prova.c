@@ -3,7 +3,7 @@
 #include<omp.h>
 #include<time.h>
 
-void write_pbm_image(void *image,int size,const char *image_name){
+void write_pgm_image(void *image,int size,const char *image_name){
 
 /*Function for writing an image,given as size x size a matrix of 0s and 1s, in a pbm file
  * image        : a pointer to the memory region that contains the image
@@ -31,7 +31,7 @@ void initialize(int size,char* name){
     for (int i=0;i<size*size;i++){
         grid[i]=(char)(rand()%2);
      }
-    write_pbm_image((void *) grid, size, name);
+    write_pgm_image((void *) grid, size, name);
    }
     free(grid);
     return;
@@ -129,11 +129,6 @@ char evaluate_cell(char** grid,int size,int i,int j){
         l_j=j-1;
         r_j=j+1;
     }
-    if(g[i*size+j]==0){
-    	printf("(%d,%d) alive \n",i,j);
-    }else{
-    	printf("(%d,%d) dead \n",i,j);
-    }
 
     neighborhood=(int)g[u_i*size+l_j]+(int)g[u_i*size+j]+(int)g[u_i*size+r_j]+(int)g[i*size+l_j]+(int)g[i*size+r_j]+(int)g[d_i*size+l_j]+(int)g[d_i*size+j]+(int)g[d_i*size+r_j];
     if (neighborhood==2 || neighborhood==3){
@@ -208,7 +203,7 @@ int main(int argc,char** argv){
     	 if (t % 5 == 0) {
 	 	 char new_image_name[20];  // Adjust the array size as needed
     		snprintf(new_image_name, sizeof(new_image_name), "test_%d.pgm", t);
-    		write_pbm_image((void*)char_image, xsize, new_image_name);
+    		write_pgm_image((void*)char_image, xsize, new_image_name);
 		}
 	}
 

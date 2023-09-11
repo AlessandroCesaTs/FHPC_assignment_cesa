@@ -15,7 +15,7 @@ void initialize(int size,char* name){
     for (int i=0;i<size*size;i++){
         grid[i]=(char)(rand()%2);
      }
-    write_pbm_image((void *) grid, size, name);
+    write_pgm_image((void *) grid, size, name);
    }
     free(grid);
     return;
