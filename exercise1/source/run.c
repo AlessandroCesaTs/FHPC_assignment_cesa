@@ -1,11 +1,37 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<omp.h>
+#include<time.h>
 
 #include"run.h"
 #include "image_handling.h"
 
+#define CPU_TIME (clock_gettime( CLOCK_REALTIME, &ts ), (double)ts.tv_sec +     \
+                  (double)ts.tv_nsec * 1e-9)
+
+#define ORDERED 0
+
 //functions for running conway's game of life
+
+void run(char* fname,int e,int n,int s){
+	char* grid;
+        int maxval;
+        int xsize;
+	int ysize;
+	read_pgm_image((void**)&grid,&maxval,&xsize,&ysize,fname);
+        for (int t=0;t<n;t++){
+		 if (e==ORDERED){
+                	 run_episode_ordered(&grid,xsize);
+		 }else{
+			 run_episode_static(&grid,xsize);
+		 }
+		 if((s!=0&&t%s==0)||t==n-1){
+                           char new_image_name[25];
+    			   snprintf(new_image_name, sizeof(new_image_name), "snapshot_%d.pgm", t);
+                             write_pgm_image((void*)grid, xsize, new_image_name);
+                  }
+               }
+}
 
 char evaluate_cell(char** grid,int size,int i,int j){
 	/*function for evaluating if a cell will be dead or alive
@@ -82,16 +108,21 @@ void run_episode_static(char** grid,int size){
          */
 	//first evaluate all grid and then change cells
 	//grid for evaluations
-	char **eval = (char **)malloc(size * sizeof(char *));
+	struct timespec ts;
+	char **eval = (char **)malloc(size * sizeof(char **));
     for (int i=0;i<size;i++){
         eval[i]=(char*)malloc(size * sizeof(char));
+    }
+    double tstart=CPU_TIME;
+   #pragma omp parallel for  schedule(static)
+    for (int i=0;i<size;i++){
         for (int j=0;j<size;j++){
             eval[i][j]=evaluate_cell(grid,size,i,j);//fill with all evaluations
         }
     }
+    double tend=CPU_TIME;
+    printf("parallel eval calculation took %g \n",tend-tstart);
     char* g=*grid; //de-reference
-//in parallel, change elements on grid with evaluations
-    #pragma omp parallel for shared(g,eval) schedule(static,size)
         for (int i=0;i<size;i++){
             for (int j=0;j<size;j++){
             g[i*size+j]=eval[i][j];

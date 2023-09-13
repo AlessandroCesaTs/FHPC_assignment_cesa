@@ -7,22 +7,24 @@
 #include"image_handling.h"
 
 void initialize(int size,char* name){
-	/*function for intializing a square grid with rando 0s and 1s and
+	/*function for intializing a square grid with random 0s and 1s and
 	 * write it in a pgm image
 	 *size: grid will be size*size
 	 *name: name of the file
-	 */
-    char *grid=(char *)malloc(size*size * sizeof(char) ); //initialize grid
-   srand(time(NULL) );
-#pragma omp parallel shared(grid,size,name) 
+	 */ 
+   char *grid=(char *)malloc(size*size * sizeof(char) ); //initialize grid
+   #pragma omp parallel
    {
-#pragma omp for schedule(static)
-    for (int i=0;i<size*size;i++){ //fill grid with random 0s and 1s
-        grid[i]=(char)(rand()%2);
-     }
-    write_pgm_image((void *) grid, size, name); //write image to file
+       int myid= omp_get_thread_num();
+       unsigned int myseed = myid*myid+myid+1;
+       char random;
+       #pragma omp for schedule(static,size)
+       for (int i=0;i<size*size;i++){ //fill grid with random 0s and 1s
+             random=(char)(rand_r(&myseed)%100<10? 1:0);
+             grid[i]=random;
+        }
    }
+    write_pgm_image((void *) grid, size, name); //write image to file
     free(grid);
     return;
 }
-

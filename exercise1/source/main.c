@@ -2,43 +2,99 @@
 #include<stdlib.h>
 #include<time.h>
 #include<omp.h>
+#include <getopt.h>
 
 #include "initialize.h"
 #include "run.h"
 #include "image_handling.h"
 
-#define CPU_TIME (clock_gettime( CLOCK_REALTIME, &ts ), (double)ts.tv_sec +	\
-		  (double)ts.tv_nsec * 1e-9)
+#define INIT 1
+#define RUN  2
+
+#define K_DFLT 100
+
+#define ORDERED 0
+#define STATIC  1
+
+
+#define CPU_TIME (clock_gettime( CLOCK_REALTIME, &ts ), (double)ts.tv_sec +     \
+                  (double)ts.tv_nsec * 1e-9)
+struct timespec ts;
+
+char fname_deflt[] = "game_of_life.pgm";
+
+int   action = 0;
+int   k      = K_DFLT;
+int   e      = ORDERED;
+int   n      = 10000;
+int   s      = 1;
+char *fname  = NULL;
 
 int main(int argc,char** argv){
-    struct  timespec ts;
-    int nthreads=1;
-#pragma omp parallel
-  {
-   #pragma omp master
-    {
-      nthreads = omp_get_num_threads();
-      printf("omp operation with %d threads\n", nthreads );
+
+double tstart=CPU_TIME;
+
+int action = 0;
+  char *optstring = "irk:e:f:n:s:";
+
+  int c;
+  while ((c = getopt(argc, argv, optstring)) != -1) {
+    switch(c) {
+      
+    case 'i':
+      action = INIT; break;
+      
+    case 'r':
+      action = RUN; break;
+      
+    case 'k':
+      k = atoi(optarg); break;
+
+    case 'e':
+      e = atoi(optarg); break;
+
+    case 'f':
+      fname = (char*)malloc( sizeof(optarg)+1 );
+      sprintf(fname, "%s", optarg );
+      break;
+
+    case 'n':
+      n = atoi(optarg); break;
+
+    case 's':
+      s = atoi(optarg); break;
+
+    default :
+      printf("argument -%c not known\n", c ); break;
     }
   }
-    double tstart  = CPU_TIME;
-    initialize(1000,"test.pgm");
-    void* image=NULL;
-    int xsize;
-    int ysize;
-    int maxval;
-    char* char_image;
-    read_pgm_image(&image,&maxval, &xsize, &ysize, "test.pgm");
-    char_image=(char*)image;
-    for (int t=0;t<1000;t++){
-         run_episode_static(&char_image,xsize);
-         if (t %1000 == 0) {
-                 char new_image_name[20];  // Adjust the array size as needed
-                snprintf(new_image_name, sizeof(new_image_name), "test_%d.pgm", t);
-                write_pgm_image((void*)char_image, xsize, new_image_name);
-                }
-        }
-    double tend = CPU_TIME;
+
+if (action==INIT){
+
+	if (k<100){
+	printf("Size too small, use a size >=100\n ");
+	return 0;
+	}else{
+		initialize(k,fname);	
+		printf("Playground of size %d initialized \n",k);
+	}
+
+}else if(action==RUN){
+
+	if(e!=STATIC && e!=ORDERED){
+		printf("Invalid evolution type. Use -e[0|1], 0 for ordered and 1 for static \n");
+	}else{
+		run(fname,e,n,s);
+	}
+}else{
+	printf("No action inserted. Use -i for initialize and -r for run \n");
+}
+
+if ( fname != NULL )
+      free ( fname );
+double tend = CPU_TIME;
     printf("process took %g \n",tend-tstart);
-    return 0;
+
+  return 0;
+
 }
