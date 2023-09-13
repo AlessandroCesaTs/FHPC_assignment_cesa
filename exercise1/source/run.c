@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include<omp.h>
 #include<time.h>
+#include<mpi.h> 
 
 #include"run.h"
 #include "image_handling.h"
@@ -108,26 +109,32 @@ void run_episode_static(char** grid,int size){
          */
 	//first evaluate all grid and then change cells
 	//grid for evaluations
-	struct timespec ts;
-	char **eval = (char **)malloc(size * sizeof(char **));
-    for (int i=0;i<size;i++){
-        eval[i]=(char*)malloc(size * sizeof(char));
+
+   // Initialize the MPI environment
+    MPI_Init(NULL, NULL);
+
+    // Get the number of processes
+    int world_size;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
+    // Get the rank of the process
+    int world_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
+    int my_size=(size*size)/world_size;
+    int my_start=world_rank*my_size;
+    if(world_rank==world_size-1){
+    	my_size+= (size*size)%world_size;
     }
-    double tstart=CPU_TIME;
-   #pragma omp parallel for  schedule(static)
-    for (int i=0;i<size;i++){
-        for (int j=0;j<size;j++){
-            eval[i][j]=evaluate_cell(grid,size,i,j);//fill with all evaluations
-        }
+    char *eval = (char *)malloc(my_size*sizeof(char ));
+    for (int i=0;i<my_size;i++){
+            eval[i]=evaluate_cell(grid,size,i/size,i%size);//fill with all evaluations
     }
-    double tend=CPU_TIME;
-    printf("parallel eval calculation took %g \n",tend-tstart);
-    char* g=*grid; //de-reference
-        for (int i=0;i<size;i++){
-            for (int j=0;j<size;j++){
-            g[i*size+j]=eval[i][j];
-             }
-           }
+
+    MPI_Gather((void*)eval,my_size,MPI_CHAR,(void*)grid,my_size ,MPI_CHAR,0,MPI_COMM_WORLD);
+
     free(eval);
+
+    MPI_Finalize;
     return;
 }
