@@ -3,6 +3,7 @@
 #include<time.h>
 #include<omp.h>
 #include <getopt.h>
+#include<mpi.h>
 
 #include "initialize.h"
 #include "run.h"
@@ -54,7 +55,7 @@ int action = 0;
       e = atoi(optarg); break;
 
     case 'f':
-      fname = (char*)malloc( sizeof(optarg)+1 );
+      fname = (char*)malloc(25*sizeof(char));
       sprintf(fname, "%s", optarg );
       break;
 
