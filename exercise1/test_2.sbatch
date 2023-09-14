@@ -4,6 +4,9 @@
 #SBATCH -p THIN --nodes 2 
 #SBATCH -o test_2.out
 
+module load openMPI/4.1.5/gnu/12.2.1
+
+
 echo "Doing 100 static iterations on 1000x1000 grid, producing snapshot every 25 iterations;using 2 THIN nodes"
 
 mpirun -np 2 ./main.x -i -k 1000 -f test_playground.pgm
