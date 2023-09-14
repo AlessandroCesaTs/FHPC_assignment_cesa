@@ -17,11 +17,6 @@
 #define ORDERED 0
 #define STATIC  1
 
-
-#define CPU_TIME (clock_gettime( CLOCK_REALTIME, &ts ), (double)ts.tv_sec +     \
-                  (double)ts.tv_nsec * 1e-9)
-struct timespec ts;
-
 char fname_deflt[] = "game_of_life.pgm";
 
 int   action = 0;
@@ -32,8 +27,6 @@ int   s      = 1;
 char *fname  = NULL;
 
 int main(int argc,char** argv){
-
-double tstart=CPU_TIME;
 
 int action = 0;
   char *optstring = "irk:e:f:n:s:";
@@ -93,8 +86,6 @@ if (action==INIT){
 
 if ( fname != NULL )
       free ( fname );
-double tend = CPU_TIME;
-    printf("process took %g \n",tend-tstart);
 
   return 0;
 

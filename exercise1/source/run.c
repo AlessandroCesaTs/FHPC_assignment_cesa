@@ -15,24 +15,35 @@
 //functions for running conway's game of life
 
 void run(char* fname,int e,int n,int s){
+	MPI_Init(NULL,NULL);
+        int world_size;
+        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	struct timespec ts;
+	double t_start=CPU_TIME;
 	char* grid;
         int maxval;
         int xsize;
 	int ysize;
 	read_pgm_image((void**)&grid,&maxval,&xsize,&ysize,fname);
-	MPI_Init(NULL,NULL);
-        for (int t=0;t<n;t++){
-		 if (e==ORDERED){
+           for (int t=0;t<n;t++){
+	 	 if (e==ORDERED){
                 	 run_episode_ordered(&grid,xsize);
 		 }else{
-			 run_episode_static(&grid,xsize);
+			 run_episode_static(&grid,xsize,world_size,rank);
 		 }
-		 if((s!=0&&t%s==0)||t==n-1){
+		 if(((s!=0&&t%s==0)||(t==n-1))&&rank==0){
                            char new_image_name[25];
     			   snprintf(new_image_name, sizeof(new_image_name), "snapshot_%d.pgm", t);
                              write_pgm_image((void*)grid, xsize, new_image_name);
                   }
                }
+	double t_end=CPU_TIME;   
+	if(rank==0){
+		printf("process took %g \n",t_end-t_start);
+	}
 	MPI_Finalize();
 }
 
@@ -104,66 +115,41 @@ void run_episode_ordered(char** grid,int size){
     return;
 }
 
-void run_episode_static(char** grid,int size){
+void run_episode_static(char** grid,int size,int world_size,int world_rank){
 	/*function for running episode in ordered mode
          * grid: pointer to the grid
          * size: grid is size*size
          */
 	//first evaluate all grid and then change cells
 	//grid for evaluations
-
-    // Get the number of processes
-    int world_size;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-
-    // Get the rank of the process
-    int world_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-
+    MPI_Barrier(MPI_COMM_WORLD);
     int my_size=(size*size)/world_size;
     int my_start=world_rank*my_size;
     if(world_rank==world_size-1){
     	my_size+= (size*size)%world_size;
     }
 
-    int* recvcounts=NULL;
-    int* displacements=NULL;
-    if (world_rank==0){
-    	recvcounts=(int*)malloc(world_size*sizeof(int));
-	displacements=(int*)malloc(world_size*sizeof(int));
-    }
+    int* recvcounts=(int*)malloc(world_size*sizeof(int));
+    int* displacements=(int*)malloc(world_size*sizeof(int));
 
-    MPI_Gather((const void*)&my_size,1,MPI_INT,(void*)recvcounts,1,MPI_INT,0,MPI_COMM_WORLD);
-    MPI_Gather((const void*)&my_start,1,MPI_INT,(void*)displacements,1,MPI_INT,0,MPI_COMM_WORLD);
-    /* if (world_rank == 0) {
-        printf("recvcounts: ");
-        for (int i = 0; i < world_size; i++) {
-            printf("%d ", recvcounts[i]);
-        }
-        printf("\n");
-	printf("displacements: ");
-        for (int i = 0; i < world_size; i++) {
-            printf("%d ", recvcounts[i]);
-        }
-        printf("\n");
+    MPI_Allgather((const void*)&my_size,1,MPI_INT,(void*)recvcounts,1,MPI_INT,MPI_COMM_WORLD);
+    MPI_Allgather((const void*)&my_start,1,MPI_INT,(void*)displacements,1,MPI_INT,MPI_COMM_WORLD);
 
-    }
-*/
+    MPI_Barrier(MPI_COMM_WORLD);
+
     char *eval = (char *)malloc(my_size*sizeof(char ));
      if (eval == NULL) {
         fprintf(stderr, "Memory allocation failed.\n");
         MPI_Abort(MPI_COMM_WORLD, 1); // Abort MPI on error
     }
-    for (int i=0;i<my_size;i++){
+     for (int i=0;i<my_size;i++){
             eval[i]=evaluate_cell(grid,size,(i+my_start)/size,(i+my_start)%size);//fill with all evaluations
     }
 
-    MPI_Gatherv((const void*)eval,my_size,MPI_CHAR,(void*)*grid,recvcounts,displacements,MPI_CHAR,0,MPI_COMM_WORLD);
+    MPI_Allgatherv((const void*)eval,my_size,MPI_CHAR,(void*)*grid,recvcounts,displacements,MPI_CHAR,MPI_COMM_WORLD);
 
-    if (world_rank==0){
-    	free(recvcounts);
-	free(displacements);
-    }
+    free(recvcounts);
+    free(displacements);
     free(eval);
 
     return;
