@@ -15,7 +15,7 @@ export OMP_PLACES=cores
 export OMP_PROC_BIND=close
 export OMP_NUM_THREADS=16
 
-./main.x -i -k 10000 -f playground_thin.pgm
+./main.x -i -k 100000 -f playground_thin.pgm
 
 for i in {1..4}
 do

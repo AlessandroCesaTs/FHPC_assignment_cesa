@@ -128,7 +128,7 @@ void run_episode_static(char** grid,int size,int world_size,int world_rank){
          */
 	//first evaluate all grid and then change cells
 	//grid for evaluations
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
     int my_size=(size*size)/world_size;
     int my_start=world_rank*my_size;
     if(world_rank==world_size-1){
@@ -141,7 +141,7 @@ void run_episode_static(char** grid,int size,int world_size,int world_rank){
     MPI_Allgather((const void*)&my_size,1,MPI_INT,(void*)recvcounts,1,MPI_INT,MPI_COMM_WORLD);
     MPI_Allgather((const void*)&my_start,1,MPI_INT,(void*)displacements,1,MPI_INT,MPI_COMM_WORLD);
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
 
     char *eval = (char *)malloc(my_size*sizeof(char ));
      if (eval == NULL) {
