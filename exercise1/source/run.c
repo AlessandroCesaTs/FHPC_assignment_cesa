@@ -3,8 +3,7 @@
 #include<omp.h>
 #include<time.h>
 #include<mpi.h> 
-
-#include"run.h"
+#include<string.h>
 #include "image_handling.h"
 
 #define CPU_TIME (clock_gettime( CLOCK_REALTIME, &ts ), (double)ts.tv_sec +     \
@@ -15,7 +14,14 @@
 //functions for running conway's game of life
 
 void run(char* fname,int e,int n,int s){
-	MPI_Init(NULL,NULL);
+	int mpi_provided_thread_level;
+	MPI_Init_thread(NULL,NULL, MPI_THREAD_FUNNELED,
+	&mpi_provided_thread_level);
+	if ( mpi_provided_thread_level < MPI_THREAD_FUNNELED ) {
+		printf("a problem arise when asking for MPI_THREAD_FUNNELED level\n");
+		MPI_Finalize();
+		exit( 1 );
+	}
         int world_size;
         MPI_Comm_size(MPI_COMM_WORLD, &world_size);
         int rank;
@@ -142,9 +148,11 @@ void run_episode_static(char** grid,int size,int world_size,int world_rank){
         fprintf(stderr, "Memory allocation failed.\n");
         MPI_Abort(MPI_COMM_WORLD, 1); // Abort MPI on error
     }
+
+     #pragma omp parallel for schedule(static,size)
      for (int i=0;i<my_size;i++){
             eval[i]=evaluate_cell(grid,size,(i+my_start)/size,(i+my_start)%size);//fill with all evaluations
-    }
+      }
 
     MPI_Allgatherv((const void*)eval,my_size,MPI_CHAR,(void*)*grid,recvcounts,displacements,MPI_CHAR,MPI_COMM_WORLD);
 
