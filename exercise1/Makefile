@@ -13,4 +13,4 @@ main.x: $(OBJECTS)
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(OFLAGS) $^ -o $@
 clean:
-	rm -rf *.o *.x $(OBJDIR)/*.o
+	rm -rf *.o *.x $(OBJDIR)/*.o timings/*.csv

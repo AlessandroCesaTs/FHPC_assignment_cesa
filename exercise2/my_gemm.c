@@ -107,7 +107,7 @@ int main(int argc, char** argv)
     elapsed = (double)diff(begin,end).tv_sec + (double)diff(begin,end).tv_nsec / 1000000000.0;
     double gflops = 2.0 * m *n*k;
     gflops = gflops/elapsed*1.0e-9; 
-    printf ("%d,%d,%d,%lf,%lf",m,n,k,elapsed,gflops);
+    printf ("%d,%d,%d,%lf,%lf\n",m,n,k,elapsed,gflops);
 
 
 #ifdef PRINT

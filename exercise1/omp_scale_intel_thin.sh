@@ -20,14 +20,16 @@ export I_MPI_PIN_DOMAIN=socket
 
 ./main.x -i -k 10000 -f playground.pgm
 
+echo size,threads,time > timings/omp_timings.csv
+
 for i in {1..12}
 do
 	export OMP_NUM_THREADS=$i
-	echo "using $i threads"
-	mpirun -n 2 ./main.x -r -f playground.pgm -n 10 -e 1 -s 2
-	echo " "
-	echo " "
-
+        for j in {1..5}
+        do
+                echo -n 10000,$i>>timings/omp_timings.csv
+        	mpirun -np 2 ./main.x -r -f playground.pgm -n 10 -e 1 -s 2 >>timings/omp_timings.csv
+        done
 done
 
 echo "done"

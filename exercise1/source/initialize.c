@@ -1,7 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<time.h>
-#include<omp.h>
 
 #include"initialize.h"
 #include"image_handling.h"
@@ -14,12 +13,9 @@ void initialize(int size,char* name){
 	 */
 
    char *grid=(char *)malloc(size*size * sizeof(char) ); //initialize grid
-       int myid=5;
-       unsigned int myseed = myid*myid+myid+1;
-       char random;
+       unsigned int seed=time(NULL);
        for (int i=0;i<size*size;i++){ //fill grid with random 0s and 1s
-             random=(char)(rand_r(&myseed)%100<10? 1:0);
-             grid[i]=random;
+             grid[i]=(char)(rand_r(&seed)%100<10? 1:0);
         } 
     
     write_pgm_image((void *) grid, size, name); //write image to file

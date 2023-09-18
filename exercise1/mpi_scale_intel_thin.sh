@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J mpi_scale_open_thin
+#SBATCH -J mpi_scale_intel_thin
 #SBATCH --get-user-env
 #SBATCH --partition=THIN
 #SBATCH --nodes=2
@@ -17,7 +17,7 @@ export OMP_PLACES=cores
 export OMP_PROC_BIND=close
 export OMP_NUM_THREADS=1
 
-./main.x -i -k 10000 -f playground_thin.pgm
+./main.x -i -k 10000 -f playground.pgm
 
 echo size,cores,time>timings/mpi_timings.csv
 
@@ -26,7 +26,7 @@ do
 	for j in {1..5}
 	do
 		echo -n 10000,$i>>timings/mpi_timings.csv
-		mpirun -np $i --map-by core ./main.x -r -f playground_thin.pgm -n 10 -e 1 -s 2 >> timings/mpi_timings.csv
+		mpirun -np $i --map-by core ./main.x -r -f playground.pgm -n 10 -e 1 -s 2 >> timings/mpi_timings.csv
 	done
 done
 
