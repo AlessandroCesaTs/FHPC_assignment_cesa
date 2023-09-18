@@ -8,7 +8,7 @@ The Exercise 1 is an implementation of Conway's Game of Life, using openMP and M
 
 In order to compile the code, you should load IntelMPI on your system. On the ORFEO cluster you can run the command 'module load intelMPI'
 
-To compile, you can use the 'Makefile', and run it on a THIN node using 'srun -n1 -N1 -p THIN make'.
+To compile, you can use the ''Makefile'', and run it on a THIN node using 'srun -n1 -N1 -p THIN make'.
 This will produce the ecxecutable 'make.x'
 
 ## Running
