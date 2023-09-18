@@ -146,6 +146,7 @@ void run_static(char** grid,int size,int n,int s){
             write_pgm_image((void*)*grid, size, new_image_name);
         }
     }
+    MPI_Barrier(MPI_COMM_WORLD);
     if(rank==0){
     	printf(",%g\n", CPU_TIME-t_start);
     }
