@@ -3,7 +3,7 @@
 #include<time.h>
 #include<omp.h>
 #include <getopt.h>
-#include<mpi.h>
+
 
 #include "initialize.h"
 #include "run.h"
@@ -28,7 +28,7 @@ char *fname  = NULL;
 
 int main(int argc,char** argv){
 
-int action = 0;
+
   char *optstring = "irk:e:f:n:s:";
 
   int c;
@@ -64,10 +64,13 @@ int action = 0;
   }
 
 if (action==INIT){
+	
+	/*initialize_test(fname);
+	printf("Test playground initialized");
+        */
 
 	if (k<100){
 	printf("Size too small, use a size >=100\n ");
-	return 0;
 	}else{
 		initialize(k,fname);	
 		printf("Playground of size %d initialized \n",k);

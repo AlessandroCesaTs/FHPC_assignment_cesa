@@ -1,4 +1,4 @@
-CC     = mpicc
+CC     =mpicc
 INCDIR = headers
 OBJDIR = objects
 SRCDIR = source

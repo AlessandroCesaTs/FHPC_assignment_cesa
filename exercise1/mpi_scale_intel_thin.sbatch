@@ -3,24 +3,26 @@
 #SBATCH --get-user-env
 #SBATCH --partition=THIN
 #SBATCH --nodes=2
-#SBATCH -o mpi_scale_open_thin.out
+#SBATCH -o mpi_scale_intel_thin.out
 #SBATCH --exclusive
 #SBATCH --time=02:00:00
 
-module load openMPI/4.1.5/gnu/12.2.1
+module load intelMPI/2021.7.1
+
+make clean
 
 make
 
 export OMP_PLACES=cores
 export OMP_PROC_BIND=close
-export OMP_NUM_THREADS=16
+export OMP_NUM_THREADS=1
 
-./main.x -i -k 100000 -f playground_thin.pgm
+./main.x -i -k 10000 -f playground_thin.pgm
 
-for i in {1..4}
+for i in {1..48}
 do
 	echo "using $i mpi threads"
-	mpirun -np $i --map-by socket ./main.x -r -f playground_thin.pgm -n 100 -e 1 -s 25
+	mpirun -np $i --map-by core ./main.x -r -f playground_thin.pgm -n 10 -e 1 -s 2
 	echo " "
 	echo " "
 

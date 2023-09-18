@@ -5,6 +5,7 @@
 #include<mpi.h> 
 #include<string.h>
 #include "image_handling.h"
+#include "run.h"
 
 #define CPU_TIME (clock_gettime( CLOCK_REALTIME, &ts ), (double)ts.tv_sec +     \
                   (double)ts.tv_nsec * 1e-9)
@@ -13,47 +14,8 @@
 
 //functions for running conway's game of life
 
-void run(char* fname,int e,int n,int s){
-	int mpi_provided_thread_level;
-	MPI_Init_thread(NULL,NULL, MPI_THREAD_FUNNELED,
-	&mpi_provided_thread_level);
-	if ( mpi_provided_thread_level < MPI_THREAD_FUNNELED ) {
-		printf("a problem arise when asking for MPI_THREAD_FUNNELED level\n");
-		MPI_Finalize();
-		exit( 1 );
-	}
-        int world_size;
-        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-	struct timespec ts;
-	double t_start=CPU_TIME;
-	char* grid;
-        int maxval;
-        int xsize;
-	int ysize;
-	read_pgm_image((void**)&grid,&maxval,&xsize,&ysize,fname);
-           for (int t=0;t<n;t++){
-	 	 if (e==ORDERED){
-                	 run_episode_ordered(&grid,xsize);
-		 }else{
-			 run_episode_static(&grid,xsize,world_size,rank);
-		 }
-		 if(((s!=0&&t%s==0)||(t==n-1))&&rank==0){
-                           char new_image_name[25];
-    			   snprintf(new_image_name, sizeof(new_image_name), "snapshot_%d.pgm", t);
-                             write_pgm_image((void*)grid, xsize, new_image_name);
-                  }
-               }
-	double t_end=CPU_TIME;   
-	if(rank==0){
-		printf("process took %g \n",t_end-t_start);
-	}
-	MPI_Finalize();
-}
-
-char evaluate_cell(char** grid,int size,int i,int j){
+char evaluate_cell(char* grid,int size,int i,int j){
 	/*function for evaluating if a cell will be dead or alive
 	 * grid: pointer to the grid
 	 * size: grid is size*size
@@ -61,7 +23,6 @@ char evaluate_cell(char** grid,int size,int i,int j){
 	 */
     int u_i,d_i,l_j,r_j; //coordinates of neighbors u=up, d=down, l=left,r=right
     int neighborhood;
-    char* g=*grid; //de-reference
     if (i==0){ //compute neighbors, considering border contitions
         u_i=size-1; 
         d_i=i+1;
@@ -84,9 +45,9 @@ char evaluate_cell(char** grid,int size,int i,int j){
         r_j=j+1;
     }
     //compute how many cells in neighborhood are alive
-    neighborhood=(int)g[u_i*size+l_j]+(int)g[u_i*size+j]+
-	    (int)g[u_i*size+r_j]+(int)g[i*size+l_j]+      
-	    (int)g[i*size+r_j]+(int)g[d_i*size+l_j]+(int)g[d_i*size+j]+(int)g[d_i*size+r_j];
+    neighborhood=grid[u_i*size+l_j]+grid[u_i*size+j]+
+	    grid[u_i*size+r_j]+grid[i*size+l_j]+      
+	    grid[i*size+r_j]+grid[d_i*size+l_j]+grid[d_i*size+j]+grid[d_i*size+r_j];
     //1=alive,0=dead
     if (neighborhood==2 || neighborhood==3){
             return (char)1;
@@ -102,7 +63,7 @@ void update_cell(char** grid,int size,int i,int j){
          * i,j: coordinates of the cell
 	 */
     char* g=*grid;
-    g[i*size+j]=evaluate_cell(grid,size,i,j);
+    g[i*size+j]=evaluate_cell(g,size,i,j);
     return;
 }
 
@@ -121,17 +82,51 @@ void run_episode_ordered(char** grid,int size){
     return;
 }
 
-void run_episode_static(char** grid,int size,int world_size,int world_rank){
-	/*function for running episode in ordered mode
+
+void run_episode_static(char** grid,int size,int my_size,int my_start,int* recvcounts,int* displacements){
+       /*function for running episode in ordered mode
          * grid: pointer to the grid
          * size: grid is size*size
          */
-	//first evaluate all grid and then change cells
-	//grid for evaluations
-    //MPI_Barrier(MPI_COMM_WORLD);
+        //first evaluate all grid and then change cells
+        //grid for evaluations
+    char *eval = (char *)malloc(my_size*sizeof(char ));
+     if (eval == NULL) {
+        fprintf(stderr, "Memory allocation failed.\n");
+        MPI_Abort(MPI_COMM_WORLD, 1); // Abort MPI on error
+    }
+     #pragma omp parallel for schedule(static,size)
+     for (int i=0;i<my_size;i++){
+            eval[i]=evaluate_cell(*grid,size,(i+my_start)/size,(i+my_start)%size);
+      }
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    MPI_Allgatherv((const void*)eval,my_size,MPI_CHAR,(void*)*grid,recvcounts,displacements,MPI_CHAR,MPI_COMM_WORLD);
+    free(eval);
+
+    return;
+}
+
+void run_static(char** grid,int size,int n,int s){
+    struct timespec ts;
+    double t_start=CPU_TIME;
+    int mpi_provided_thread_level;
+	MPI_Init_thread(NULL,NULL, MPI_THREAD_FUNNELED,
+	&mpi_provided_thread_level);
+	if ( mpi_provided_thread_level < MPI_THREAD_FUNNELED ) {
+		printf("a problem arise when asking for MPI_THREAD_FUNNELED level\n");
+		MPI_Finalize();
+		exit( 1 );
+	}
+    int world_size;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
     int my_size=(size*size)/world_size;
-    int my_start=world_rank*my_size;
-    if(world_rank==world_size-1){
+    int my_start=rank*my_size;
+    if(rank==world_size-1){
     	my_size+= (size*size)%world_size;
     }
 
@@ -143,22 +138,59 @@ void run_episode_static(char** grid,int size,int world_size,int world_rank){
 
     //MPI_Barrier(MPI_COMM_WORLD);
 
-    char *eval = (char *)malloc(my_size*sizeof(char ));
-     if (eval == NULL) {
-        fprintf(stderr, "Memory allocation failed.\n");
-        MPI_Abort(MPI_COMM_WORLD, 1); // Abort MPI on error
+    for (int t=0;t<n;t++){
+        run_episode_static(grid,size,my_size,my_start,recvcounts,displacements);
+        if(((s!=0&&t%s==0)||(t==n-1))&&rank==0){
+            char new_image_name[25];
+            snprintf(new_image_name, sizeof(new_image_name), "snapshot_%d.pgm", t);
+            write_pgm_image((void*)*grid, size, new_image_name);
+        }
     }
-
-     #pragma omp parallel for schedule(static,size)
-     for (int i=0;i<my_size;i++){
-            eval[i]=evaluate_cell(grid,size,(i+my_start)/size,(i+my_start)%size);//fill with all evaluations
-      }
-
-    MPI_Allgatherv((const void*)eval,my_size,MPI_CHAR,(void*)*grid,recvcounts,displacements,MPI_CHAR,MPI_COMM_WORLD);
+    if(rank==0){
+    	printf("Process took %g \n", CPU_TIME-t_start);
+    }
 
     free(recvcounts);
     free(displacements);
-    free(eval);
+
+    MPI_Finalize();
 
     return;
+
 }
+
+
+void run_ordered(char** grid,int xsize,int n, int s){
+    struct timespec ts;
+    double t_start=CPU_TIME;
+    for(int t=0;t<n;t++){
+        run_episode_ordered(grid,xsize);
+        if((s!=0&&t%s==0)||(t==n-1)){
+            char new_image_name[25];
+            snprintf(new_image_name, sizeof(new_image_name), "snapshot_%d.pgm", t);
+            write_pgm_image((void*)*grid, xsize, new_image_name);
+        }
+    }
+    printf("Process took %g \n", CPU_TIME-t_start);
+    return;
+
+}
+
+void run(char* fname,int e,int n,int s){
+	
+    char* grid;
+    int maxval;
+    int xsize;
+    int ysize;
+    read_pgm_image((void**)&grid,&maxval,&xsize,&ysize,fname);
+
+    if (e==ORDERED){
+            run_ordered(&grid,xsize,n,s);
+    }
+    else{
+            run_static(&grid,xsize,n,s);
+    }
+   
+    return;
+}
+
