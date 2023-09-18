@@ -147,7 +147,7 @@ void run_static(char** grid,int size,int n,int s){
         }
     }
     if(rank==0){
-    	printf("Process took %g \n", CPU_TIME-t_start);
+    	printf(",%g\n", CPU_TIME-t_start);
     }
 
     free(recvcounts);
@@ -171,7 +171,7 @@ void run_ordered(char** grid,int xsize,int n, int s){
             write_pgm_image((void*)*grid, xsize, new_image_name);
         }
     }
-    printf("Process took %g \n", CPU_TIME-t_start);
+    printf(",%g\n", CPU_TIME-t_start);
     return;
 
 }
