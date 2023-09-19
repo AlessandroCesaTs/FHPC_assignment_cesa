@@ -1,9 +1,9 @@
-#EXERCISE 2
+# EXERCISE 2
 
 The Exercise 2 consists in the comparing the MLK and OpenBLAS math libraries on the level 3 BLAS function called gemm.
 
 
-##Files
+## Files
 
 In this folder you can find:
 
