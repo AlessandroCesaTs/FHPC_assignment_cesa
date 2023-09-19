@@ -1,34 +1,17 @@
-# information about exercise 2
+#EXERCISE 2
 
-## Build BLIS library 
+The Exercise 2 consists in the comparing the MLK and OpenBLAS math libraries on the level 3 BLAS function called gemm.
 
 
-AMD provide its own implementation of standard BLAS routine, this implementation is provided in the `BLIS` library, <a href="https://developer.amd.com/amd-aocl/blas-library/"> available here </a>.
-There is also the source code on github.
+##Files
 
-Download it:
-```
-$git clone https://github.com/flame/blis.git
-$cd blis
-```
+In this folder you can find:
 
-Configure and compile with openMP support (multithreading is disabled by default,remember to modify *prefix* path):
-```
- srun -n1 ./configure --enable-cblas --enable-threading=openmp --prefix=/u/area/ntosato/myblis auto
- srun  -n 1 --cpus-per-task=128 make -j 128
- make install
-```
-
-We compile in the target machine, and we allow the command to use 128 cores, then use `-j 128` argument to compile in parallel way.
-
-To use BLIS with multiple threads:
-`export BLIS_NUM_THREADS=128`.
-
-The final artifact will be placed in `/u/area/ntosato/myblis/lib` directory, this is the path that you need to put inside `Makefile` and library path .
-
-To compile the previous exercise with the new BLIS library modify the `Makefile` uncommenting the `BLIS` related rows. 
-
-And adjust LD_LIBRARY_PATH (**modify it with your own path**):
-```
- export LD_LIBRARY_PATH=/u/area/ntosato/myblis/lib:$LD_LIBRARY_PATH
-```
+* `gemm.c`: the original gemm function provided.
+* `my_gemm.c`: a modified version of gemm.c, useful for an easier storing of the results
+* `Makefile`: used for compiling the necessary codes
+* `compile.sh`: slurm script used for compiling the codes
+* `close.sh`: slurm script used for measuring scalability over the size of the matrix, at 12 cores with the policy `OMP_PLACES=close`, on the THIN nodes, using MLK and OpenBLAS on both single and double precision. The size of the matrix is increased from 2000x2000 to 20000x20000 with steps of size 2000.
+* `spread.sh`:slurm script used for measuring scalability over the size of the matrix, at 12 cores with the policy `OMP_PLACES=spread`, on the THIN nodes, using MLK and OpenBLAS on both single and double precision. The size of the matrix is increased from 2000x2000 to 20000x20000 with steps of size 2000.
+* `size.sh`: slurm script used for measuring the scalability over cores, at size 12000, on the THIN nodes, using MLK and OpenBlas on both single and double precision. The number of cores is increased from 1 to 12.
+* `results`: folder containing the results(in terms of time elapsed and GFlops) of the exercises. There is one .csv file for each combination of each exercise, and they contain the data used for the figures provided in the report.
