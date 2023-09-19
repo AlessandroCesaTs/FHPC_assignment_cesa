@@ -26,7 +26,7 @@ ive the argument `-k`.
 
 Otherwise, you can allocate the needed resources with the command `salloc -N<number of nodes> -n<number of tasks>`, and then run the executable as previously described.
 
-##Files
+## Files
 
 In the present directory you can find:
 
