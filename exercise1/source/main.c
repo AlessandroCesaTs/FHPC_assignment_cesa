@@ -65,9 +65,9 @@ int main(int argc,char** argv){
 
 if (action==INIT){
 	
-	/*initialize_test(fname);
+/*	initialize_test(fname); //for running validation tests on a predefined 4x4 grid
 	printf("Test playground initialized");
-        */
+  */      
 
 	if (k<100){
 	printf("Size too small, use a size >=100\n ");
@@ -75,6 +75,7 @@ if (action==INIT){
 		initialize(k,fname);	
 		printf("Playground of size %d initialized \n",k);
 	}
+	
 
 }else if(action==RUN){
 

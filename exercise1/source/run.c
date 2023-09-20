@@ -56,69 +56,56 @@ char evaluate_cell(char* grid,int size,int i,int j){
         }
 }
 
-void update_cell(char** grid,int size,int i,int j){
-	/*function for updating a single cell
-	 *grid: pointer to the grid
-         * size: grid is size*size
-         * i,j: coordinates of the cell
-	 */
-    char* g=*grid;
-    g[i*size+j]=evaluate_cell(g,size,i,j);
-    return;
-}
 
-
-void run_episode_ordered(char** grid,int size){
+void run_episode_ordered(char* grid,int size){
 	/*function for running episode in ordered mode
 	 * grid: pointer to the grid
          * size: grid is size*size
 	 */
 	//update one cell after the other
+    //char* g=*grid;
     for (int i=0;i<size;i++){
         for (int j=0;j<size;j++){
-            update_cell(grid,size,i,j);
+            //update_cell(grid,size,i,j);
+	    grid[i*size+j]=evaluate_cell(grid,size,i,j);
         }
     }
     return;
 }
 
 
-void run_episode_static(char** grid,int size,int my_size,int my_start,int* recvcounts,int* displacements){
+void run_episode_static(char* grid,char* eval,int size,int my_size,int my_start,int* recvcounts,int* displacements){
        /*function for running episode in ordered mode
          * grid: pointer to the grid
          * size: grid is size*size
          */
         //first evaluate all grid and then change cells
         //grid for evaluations
-    char *eval = (char *)malloc(my_size*sizeof(char ));
-     if (eval == NULL) {
-        fprintf(stderr, "Memory allocation failed.\n");
-        MPI_Abort(MPI_COMM_WORLD, 1); // Abort MPI on error
-    }
+
      #pragma omp parallel for schedule(static,size)
      for (int i=0;i<my_size;i++){
-            eval[i]=evaluate_cell(*grid,size,(i+my_start)/size,(i+my_start)%size);
+            eval[i]=evaluate_cell(grid,size,(i+my_start)/size,(i+my_start)%size);
       }
     
     MPI_Barrier(MPI_COMM_WORLD);
 
-    MPI_Allgatherv((const void*)eval,my_size,MPI_CHAR,(void*)*grid,recvcounts,displacements,MPI_CHAR,MPI_COMM_WORLD);
-    free(eval);
+    MPI_Allgatherv((const void*)eval,my_size,MPI_CHAR,(void*)grid,recvcounts,displacements,MPI_CHAR,MPI_COMM_WORLD);
 
     return;
 }
 
-void run_static(char** grid,int size,int n,int s){
+void run_static(char* grid,int size,int n,int s){
     struct timespec ts;
     double t_start=CPU_TIME;
-    int mpi_provided_thread_level;
+    MPI_Init(NULL,NULL);
+   /* int mpi_provided_thread_level;
 	MPI_Init_thread(NULL,NULL, MPI_THREAD_FUNNELED,
 	&mpi_provided_thread_level);
 	if ( mpi_provided_thread_level < MPI_THREAD_FUNNELED ) {
 		printf("a problem arise when asking for MPI_THREAD_FUNNELED level\n");
 		MPI_Finalize();
 		exit( 1 );
-	}
+	}*/
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     int rank;
@@ -126,33 +113,43 @@ void run_static(char** grid,int size,int n,int s){
 
     int my_size=(size*size)/world_size;
     int my_start=rank*my_size;
-    if(rank==world_size-1){
+    /*if(rank==world_size-1){
     	my_size+= (size*size)%world_size;
     }
+*/
 
+    int rest=(size*size)%world_size;
+    if (rank<rest){
+    	my_size+=1;
+	my_start+=rank;
+    }else{
+    	my_start+=rest;
+    }
     int* recvcounts=(int*)malloc(world_size*sizeof(int));
     int* displacements=(int*)malloc(world_size*sizeof(int));
 
     MPI_Allgather((const void*)&my_size,1,MPI_INT,(void*)recvcounts,1,MPI_INT,MPI_COMM_WORLD);
     MPI_Allgather((const void*)&my_start,1,MPI_INT,(void*)displacements,1,MPI_INT,MPI_COMM_WORLD);
 
-    //MPI_Barrier(MPI_COMM_WORLD);
+    char* eval = (char*)malloc(my_size*sizeof(char ));
 
     for (int t=0;t<n;t++){
-        run_episode_static(grid,size,my_size,my_start,recvcounts,displacements);
+        run_episode_static(grid,eval,size,my_size,my_start,recvcounts,displacements);
         if(((s!=0&&t%s==0)||(t==n-1))&&rank==0){
             char new_image_name[25];
             snprintf(new_image_name, sizeof(new_image_name), "snapshot_%d.pgm", t);
-            write_pgm_image((void*)*grid, size, new_image_name);
+            write_pgm_image((void*)grid, size, new_image_name);
         }
     }
+
+    free(eval);
+    free(recvcounts);
+    free(displacements);
+
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank==0){
     	printf(",%g\n", CPU_TIME-t_start);
     }
-
-    free(recvcounts);
-    free(displacements);
 
     MPI_Finalize();
 
@@ -161,7 +158,7 @@ void run_static(char** grid,int size,int n,int s){
 }
 
 
-void run_ordered(char** grid,int xsize,int n, int s){
+void run_ordered(char* grid,int xsize,int n, int s){
     struct timespec ts;
     double t_start=CPU_TIME;
     for(int t=0;t<n;t++){
@@ -169,7 +166,7 @@ void run_ordered(char** grid,int xsize,int n, int s){
         if((s!=0&&t%s==0)||(t==n-1)){
             char new_image_name[25];
             snprintf(new_image_name, sizeof(new_image_name), "snapshot_%d.pgm", t);
-            write_pgm_image((void*)*grid, xsize, new_image_name);
+            write_pgm_image((void*)grid, xsize, new_image_name);
         }
     }
     printf(",%g\n", CPU_TIME-t_start);
@@ -186,10 +183,10 @@ void run(char* fname,int e,int n,int s){
     read_pgm_image((void**)&grid,&maxval,&xsize,&ysize,fname);
 
     if (e==ORDERED){
-            run_ordered(&grid,xsize,n,s);
+            run_ordered(grid,xsize,n,s);
     }
     else{
-            run_static(&grid,xsize,n,s);
+            run_static(grid,xsize,n,s);
     }
    
     return;

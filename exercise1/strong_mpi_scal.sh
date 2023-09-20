@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH -J mpi_scale_intel_thin
+#SBATCH -J strong_mpi_scal
 #SBATCH --get-user-env
 #SBATCH --partition=THIN
 #SBATCH --nodes=2
-#SBATCH -o mpi_scale_intel_thin.out
+#SBATCH -o strong_mpi_scal.out
 #SBATCH --exclusive
 #SBATCH --time=02:00:00
 
@@ -19,14 +19,14 @@ export OMP_NUM_THREADS=1
 
 ./main.x -i -k 10000 -f playground.pgm
 
-echo size,cores,time>timings/mpi_timings.csv
+echo size,tasks,time>timings/strong_mpi_timings.csv
 
 for i in {1..48}
 do
 	for j in {1..5}
 	do
-		echo -n 10000,$i>>timings/mpi_timings.csv
-		mpirun -np $i --map-by core ./main.x -r -f playground.pgm -n 10 -e 1 -s 2 >> timings/mpi_timings.csv
+		echo -n 10000,$i>>timings/strong_mpi_timings.csv
+		mpirun -np $i --map-by core ./main.x -r -f playground.pgm -n 10 -e 1 -s 2 >> timings/strong_mpi_timings.csv
 	done
 done
 

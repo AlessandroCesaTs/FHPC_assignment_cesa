@@ -15,7 +15,7 @@ make
 
 ./main.x -i -k 4 -f playground_test.pgm
 
-mpirun -n 2 ./main.x -r -f playground_test.pgm -n 2 -e 1 -s 1
+mpirun -n 3 ./main.x -r -f playground_test.pgm -n 2 -e 1 -s 1
 
 echo "done"
 

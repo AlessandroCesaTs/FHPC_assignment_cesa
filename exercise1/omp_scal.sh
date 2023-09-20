@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH -J omp_scale_intel_thin
+#SBATCH -J omp_scal
 #SBATCH --get-user-env
 #SBATCH --partition=THIN
-#SBATCH --nodes=1
-#SBATCH -o omp_scale_intel_thin.out
+#SBATCH --nodes=2
+#SBATCH -o omp_scal.out
 #SBATCH --exclusive
 #SBATCH --time=02:00:00
  
@@ -28,7 +28,7 @@ do
         for j in {1..5}
         do
                 echo -n 10000,$i>>timings/omp_timings.csv
-        	mpirun -np 2 ./main.x -r -f playground.pgm -n 10 -e 1 -s 2 >>timings/omp_timings.csv
+        	mpirun -np 4 ./main.x -r -f playground.pgm -n 10 -e 1 -s 2 >>timings/omp_timings.csv
         done
 done
 
