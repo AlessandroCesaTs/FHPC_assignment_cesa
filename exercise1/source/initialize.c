@@ -14,6 +14,7 @@ void initialize(int size,char* name){
 
    char *grid=(char *)malloc(size*size * sizeof(char) ); //initialize grid
        unsigned int seed=time(NULL);
+       #pragma omp parallel for
        for (int i=0;i<size*size;i++){ //fill grid with random 0s and 1s
              grid[i]=(char)(rand_r(&seed)%100<10? 1:0);
         } 
@@ -32,9 +33,10 @@ void initialize_test(char* name){
          */
    int size=4;
    char *grid=(char *)malloc(size*size * sizeof(char) ); //initialize grid
-       for (int i=0;i<size*size;i++){ //fill grid with random 0s and 1s
+   #pragma  omp parallel for
+   for (int i=0;i<size*size;i++){ //fill grid with random 0s and 1s
              grid[i]=(char)0;
-        }
+   }
    grid[5]=1;
    grid[15]=1;
 

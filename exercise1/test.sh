@@ -13,6 +13,8 @@ make clean
 
 make
 
+export OMP_NUM_THREADS=3
+
 ./main.x -i -k 4 -f playground_test.pgm
 
 mpirun -n 3 ./main.x -r -f playground_test.pgm -n 2 -e 1 -s 1

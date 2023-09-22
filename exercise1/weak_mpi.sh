@@ -1,9 +1,10 @@
 #!/bin/bash
-#SBATCH -J weak_mpi_scal_socket
+#SBATCH -J weak_mpi
 #SBATCH --get-user-env
 #SBATCH --partition=THIN
 #SBATCH --nodes=2
-#SBATCH -o weak_mpi_scal_socket.out
+#SBATCH --tasks-per-node=2
+#SBATCH -o weak_mpi.out
 #SBATCH --exclusive
 #SBATCH --time=02:00:00
 
@@ -17,11 +18,11 @@ make
 export OMP_PLACES=cores
 export OMP_PROC_BIND=close
 export OMP_NUM_THREADS=12
-export I_MPI_PIN_DOMAIN=socket
+export I_MPI_PIN_DOMAIN=omp
 
-size=(0 100000 141421 173205 200000)
+size=(0 10000 14142 17321 20000)
 
-echo size,sockets,time > timings/weak_mpi_socket_timings.csv 
+echo size,sockets,time > timings/weak_mpi.csv 
 
 for i in {1..4}
 do
@@ -29,11 +30,10 @@ do
 	
 	for j in {1..5}
 	do
-		echo -n ${size[i]},$i >> timings/weak_mpi_socket_timings.csv
-		mpirun -np $i ./main.x -r -f playground.pgm -n 10 -e 1 -s 2 >> timings/weak_mpi_socket_timings.csv
+		echo -n ${size[i]},$i >> timings/weak_mpi.csv
+		mpirun -np $i ./main.x -r -f playground.pgm -n 10 -e 1 -s 0 >> timings/weak_mpi.csv
 	done
 done 
-
 
 echo "done"
 

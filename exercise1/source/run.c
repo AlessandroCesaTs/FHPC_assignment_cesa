@@ -15,39 +15,25 @@
 //functions for running conway's game of life
 
 
-char evaluate_cell(char* grid,int size,int i,int j){
-	/*function for evaluating if a cell will be dead or alive
-	 * grid: pointer to the grid
-	 * size: grid is size*size
-	 * i,j: coordinates of the cell
-	 */
-    int u_i,d_i,l_j,r_j; //coordinates of neighbors u=up, d=down, l=left,r=right
-    int neighborhood;
-    if (i==0){ //compute neighbors, considering border contitions
-        u_i=size-1; 
-        d_i=i+1;
-    }else if(i==size-1){
-        u_i=i-1;
-        d_i=0;
-    }else{
-        u_i=i-1;
-        d_i=i+1;
-    }
+char evaluate_cell(char* grid,int size,int i){
+        /*function for evaluating if a cell will be dead or alive
+         * grid: pointer to the grid
+         * size: grid is size*size
+         * i: position of the cell
+         */
+    const int row=i/size; //get row and column of cell
+    const int col=i%size;
 
-    if(j==0){
-        l_j=size-1;
-        r_j=j+1;
-    }else if(j==size-1){
-        l_j=j-1;
-        r_j=0;
-    }else{
-        l_j=j-1;
-        r_j=j+1;
-    }
+    int up_row = (row - 1 + size) % size; //compute coordinates of neighbors
+    int down_row = (row + 1) % size;
+    int left_col = (col - 1 + size) % size;
+    int right_col = (col + 1) % size;
+
+    int neighborhood;
     //compute how many cells in neighborhood are alive
-    neighborhood=grid[u_i*size+l_j]+grid[u_i*size+j]+
-	    grid[u_i*size+r_j]+grid[i*size+l_j]+      
-	    grid[i*size+r_j]+grid[d_i*size+l_j]+grid[d_i*size+j]+grid[d_i*size+r_j];
+    neighborhood=grid[up_row*size+left_col]+grid[up_row*size+col]+grid[up_row*size+right_col]
+	        +grid[row*size+left_col]+grid[row*size+right_col]
+		+grid[down_row*size+left_col]+grid[down_row*size+col]+grid[down_row*size+right_col];
     //1=alive,0=dead
     if (neighborhood==2 || neighborhood==3){
             return (char)1;
@@ -57,6 +43,7 @@ char evaluate_cell(char* grid,int size,int i,int j){
 }
 
 
+
 void run_episode_ordered(char* grid,int size){
 	/*function for running episode in ordered mode
 	 * grid: pointer to the grid
@@ -64,78 +51,73 @@ void run_episode_ordered(char* grid,int size){
 	 */
 	//update one cell after the other
     //char* g=*grid;
-    for (int i=0;i<size;i++){
-        for (int j=0;j<size;j++){
-            //update_cell(grid,size,i,j);
-	    grid[i*size+j]=evaluate_cell(grid,size,i,j);
-        }
+    for (int i=0;i<size*size;i++){
+	 grid[i]=evaluate_cell(grid,size,i);
     }
     return;
 }
 
-
-void run_episode_static(char* grid,char* eval,int size,int my_size,int my_start,int* recvcounts,int* displacements){
-       /*function for running episode in ordered mode
+void run_episode_static(char* grid,char* eval,int size,int rank,int* lengths,int* starts){
+       /*function for running episode in static
          * grid: pointer to the grid
+	 * eval: array where the next states will be stored
          * size: grid is size*size
+	 * rank: MPI rank
+	 * lengths: lengths of the parts of grid that each task will work on
+	 * starts: starting points of the parts of the grid where each tsk will work on
          */
         //first evaluate all grid and then change cells
-        //grid for evaluations
-
-     #pragma omp parallel for schedule(static,size)
-     for (int i=0;i<my_size;i++){
-            eval[i]=evaluate_cell(grid,size,(i+my_start)/size,(i+my_start)%size);
+	
+     MPI_Barrier(MPI_COMM_WORLD);
+     #pragma omp parallel for schedule(static)  //parallilize with OpenMP
+     for (int i=0;i<lengths[rank];i++){
+            eval[i]=evaluate_cell(grid,size,i+starts[rank]); //fill eval with the new states of cells
       }
-    
-    MPI_Barrier(MPI_COMM_WORLD);
 
-    MPI_Allgatherv((const void*)eval,my_size,MPI_CHAR,(void*)grid,recvcounts,displacements,MPI_CHAR,MPI_COMM_WORLD);
+    MPI_Allgatherv((const void*)eval,lengths[rank],MPI_CHAR,(void*)grid,lengths,starts,MPI_CHAR,MPI_COMM_WORLD); //each process sends its new 															states to the others, which 														      copy them in the comlete gri                                                                                                                  d 
 
     return;
 }
 
 void run_static(char* grid,int size,int n,int s){
-    struct timespec ts;
+    /*function for running in static
+         * grid: pointer to the grid
+         * size: grid is size*size
+         * n: number of episodes
+         * s :every how many episodes print the grid
+         */
+
+    struct timespec ts; //start measuring time
     double t_start=CPU_TIME;
-    MPI_Init(NULL,NULL);
-   /* int mpi_provided_thread_level;
-	MPI_Init_thread(NULL,NULL, MPI_THREAD_FUNNELED,
-	&mpi_provided_thread_level);
-	if ( mpi_provided_thread_level < MPI_THREAD_FUNNELED ) {
-		printf("a problem arise when asking for MPI_THREAD_FUNNELED level\n");
-		MPI_Finalize();
-		exit( 1 );
-	}*/
+    
+    MPI_Init(NULL,NULL); 
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    int my_size=(size*size)/world_size;
-    int my_start=rank*my_size;
-    /*if(rank==world_size-1){
-    	my_size+= (size*size)%world_size;
+    int* lengths=(int*)malloc(world_size*sizeof(int)); //initialize array for lengths of the parts of grid that each task will work on
+    int* starts=(int*)malloc(world_size*sizeof(int));  //initialize array for starting points on th grid  of the parts that each task will wor							       k on
+    
+    int rest=(size*size)%world_size; //remainder of division of size of grid for number of taks
+
+    for (int i=0; i<world_size;i++){  //compute lengths and starts by dividing and distributing the remainder
+    	lengths[i]=(size*size)/world_size;
+	starts[i]=i*lengths[i];
+	if (i<rest){
+       		lengths[i]+=1;
+        	starts[i]+=i;
+   	 }else{
+        	starts[i]+=rest;
+    	 }
+
     }
-*/
 
-    int rest=(size*size)%world_size;
-    if (rank<rest){
-    	my_size+=1;
-	my_start+=rank;
-    }else{
-    	my_start+=rest;
-    }
-    int* recvcounts=(int*)malloc(world_size*sizeof(int));
-    int* displacements=(int*)malloc(world_size*sizeof(int));
+    char* eval = (char*)malloc(lengths[rank]*sizeof(char )); //array that will store the next state for the part of the grid each rank will wo                                                               rk on 
 
-    MPI_Allgather((const void*)&my_size,1,MPI_INT,(void*)recvcounts,1,MPI_INT,MPI_COMM_WORLD);
-    MPI_Allgather((const void*)&my_start,1,MPI_INT,(void*)displacements,1,MPI_INT,MPI_COMM_WORLD);
-
-    char* eval = (char*)malloc(my_size*sizeof(char ));
-
-    for (int t=0;t<n;t++){
-        run_episode_static(grid,eval,size,my_size,my_start,recvcounts,displacements);
-        if(((s!=0&&t%s==0)||(t==n-1))&&rank==0){
+    for (int t=0;t<n;t++){ //for each episode, run and rank 0 prints the image if necessary
+	run_episode_static(grid,eval,size,rank,lengths,starts);
+        if(rank==0&&((s!=0&&t%s==0)||(t==n-1))){
             char new_image_name[25];
             snprintf(new_image_name, sizeof(new_image_name), "snapshot_%d.pgm", t);
             write_pgm_image((void*)grid, size, new_image_name);
@@ -143,11 +125,11 @@ void run_static(char* grid,int size,int n,int s){
     }
 
     free(eval);
-    free(recvcounts);
-    free(displacements);
+    free(lengths);
+    free(starts);
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if(rank==0){
+    if(rank==0){                 //print time
     	printf(",%g\n", CPU_TIME-t_start);
     }
 
@@ -159,9 +141,15 @@ void run_static(char* grid,int size,int n,int s){
 
 
 void run_ordered(char* grid,int xsize,int n, int s){
+     /*function for running in ordered
+         * grid: pointer to the grid
+         * size: grid is size*size
+         * n: number of episodes
+         * s :every how many episodes print the grid
+         */
     struct timespec ts;
-    double t_start=CPU_TIME;
-    for(int t=0;t<n;t++){
+    double t_start=CPU_TIME; //start taking time
+    for(int t=0;t<n;t++){ //at each episode run and if necessary print 
         run_episode_ordered(grid,xsize);
         if((s!=0&&t%s==0)||(t==n-1)){
             char new_image_name[25];
@@ -169,12 +157,18 @@ void run_ordered(char* grid,int xsize,int n, int s){
             write_pgm_image((void*)grid, xsize, new_image_name);
         }
     }
-    printf(",%g\n", CPU_TIME-t_start);
+    printf(",%g\n", CPU_TIME-t_start); //print time
     return;
 
 }
 
 void run(char* fname,int e,int n,int s){
+   /*function for running Conway's Game of Life
+    * fname: name of file from where to read the grid
+    * e: run ordered or static
+    * n: number of episodes
+    * s :every how many episodes print the grid
+    */	
 	
     char* grid;
     int maxval;
