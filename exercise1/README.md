@@ -32,10 +32,10 @@ In the present directory you can find:
 
 * `Makefile`: used to compile the code
 * `test.sh`: slurm script used for running a small test to validate my implementation of Conway's Game of Life
-* `omp_scale.sh`: slurm script used for the OpenMP scaling exercise
-* `omp_scale_single.sh`: slurm script used for the OpenMP scaling exercise on a single MPI task
-* `weak_mpi_scale.sh`: slurm script used for the weak MPI scaling exercise
-* `strong_mpi_scale.sh`: slurm script used for the strong MPI scaling exercise
+* `omp.sh`: slurm script used for the OpenMP scaling exercise on multiple MPI tasks
+* `omp_single.sh`: slurm script used for the OpenMP scaling exercise on a single MPI task
+* `weak_mpi.sh`: slurm script used for the weak MPI scaling exercise
+* `strong_mpi.sh`: slurm script used for the strong MPI scaling exercise
 * `source`: folder containing all the C source codes necessary for the exercise
 * `headers`: folder containing all the header files necessary for compiling the source codes
 * `objects`: folder used to store object files 
